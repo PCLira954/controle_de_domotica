@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domótica - Painel de Controle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Painel de Controle de Domótica</h1>
+    </header>
+
+    <main>
+        <section id="comodos">
+            <h2>Cômodos</h2>
+            <div class="form-container">
+                <input type="text" id="comodo-nome" placeholder="Nome do Cômodo">
+                <button id="add-comodo">Adicionar</button>
+            </div>
+            <ul id="comodos-list"></ul>
+        </section>
+
+        <hr>
+
+        <section id="dispositivos">
+            <h2>Dispositivos</h2>
+            <div class="form-container">
+                <input type="text" id="dispositivo-nome" placeholder="Nome do Dispositivo">
+                <select id="dispositivo-tipo">
+                    <option value="luz">Luz</option>
+                    <option value="tomada">Tomada</option>
+                </select>
+                <select id="dispositivo-comodo">
+                    <option value="">Selecione um cômodo</option>
+                </select>
+                <button id="add-dispositivo">Adicionar</button>
+            </div>
+            <ul id="dispositivos-list"></ul>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

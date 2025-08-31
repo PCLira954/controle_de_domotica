@@ -1,0 +1,32 @@
+@startuml Domotica
+left to right direction
+
+
+actor Usuario
+
+
+rectangle Sistema as SistemaDomotica {
+  usecase UC1 as "Ligar/Desligar Dispositivo"
+  usecase UC2 as "Cadastrar Dispositivo"
+  usecase UC3 as "Remover Dispositivo"
+  usecase UC4 as "Cadastrar Comodo"
+  usecase UC5 as "Gerenciar Comodos"
+  usecase UC6 as "Criar Cena"
+  usecase UC7 as "Editar Cena"
+  usecase UC8 as "Executar Cena"
+  usecase UC9 as "Ativar/Desativar Cena"
+}
+
+
+Usuario --> UC1
+Usuario --> UC2
+Usuario --> UC3
+Usuario --> UC4
+Usuario --> UC5
+Usuario --> UC6
+Usuario --> UC7
+Usuario --> UC8
+Usuario --> UC9
+
+
+@enduml

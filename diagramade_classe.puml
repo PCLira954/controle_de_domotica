@@ -1,0 +1,49 @@
+@startuml Domotica
+
+
+class Comodo {
+  - id: int
+  - nome: String
+  + adicionarDispositivo(d: Dispositivo): void
+  + removerDispositivo(d: Dispositivo): void
+  + listarDispositivos(): List<Dispositivo>
+}
+
+
+class Dispositivo {
+  - id: int
+  - nome: String
+  - tipo: String
+  - estado: boolean
+  + ligar(): void
+  + desligar(): void
+  + alternarEstado(): void
+}
+
+
+class Cena {
+  - id: int
+  - nome: String
+  - ativa: boolean
+  + adicionarAcao(a: Acao): void
+  + removerAcao(a: Acao): void
+  + executar(): void
+  + ativar(): void
+  + desativar(): void
+}
+
+
+class Acao {
+  - id: int
+  - ordem: int
+  - intervalo: int
+  + executar(): void
+}
+
+
+Comodo "1" -- "*" Dispositivo : contém >
+Cena "1" -- "*" Acao : contém >
+Acao "1" --> "1" Dispositivo : controla >
+
+
+@enduml
