@@ -1,45 +1,92 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domótica - Painel de Controle</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Controle de Domótica</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>Painel de Controle de Domótica</h1>
-    </header>
+  <header>
+    <h1>Controle de Domótica</h1>
+  </header>
 
-    <main>
-        <section id="comodos">
-            <h2>Cômodos</h2>
-            <div class="form-container">
-                <input type="text" id="comodo-nome" placeholder="Nome do Cômodo">
-                <button id="add-comodo">Adicionar</button>
-            </div>
-            <ul id="comodos-list"></ul>
-        </section>
+  <main>
+    <!-- CASAS -->
+    <section>
+      <h2>Casas</h2>
+      <div class="form-container">
+        <input type="text" id="casa-nome" placeholder="Nome da casa">
+        <button id="add-casa">Adicionar Casa</button>
+      </div>
+      <ul id="casas-list"></ul>
+    </section>
 
-        <hr>
+    <!-- CÔMODOS -->
+    <section>
+      <h2>Cômodos</h2>
+      <div class="form-container">
+        <input type="text" id="comodo-nome" placeholder="Nome do cômodo">
+        <select id="comodo-casa"></select>
+        <button id="add-comodo">Adicionar Cômodo</button>
+      </div>
+      <ul id="comodos-list"></ul>
+    </section>
 
-        <section id="dispositivos">
-            <h2>Dispositivos</h2>
-            <div class="form-container">
-                <input type="text" id="dispositivo-nome" placeholder="Nome do Dispositivo">
-                <select id="dispositivo-tipo">
-                    <option value="luz">Luz</option>
-                    <option value="tomada">Tomada</option>
-                </select>
-                <select id="dispositivo-comodo">
-                    <option value="">Selecione um cômodo</option>
-                </select>
-                <button id="add-dispositivo">Adicionar</button>
-            </div>
-            <ul id="dispositivos-list"></ul>
-        </section>
-    </main>
+    <!-- DISPOSITIVOS -->
+    <section>
+      <h2>Dispositivos</h2>
+      <div class="form-container">
+        <input type="text" id="dispositivo-nome" placeholder="Nome do dispositivo">
+        <select id="dispositivo-tipo">
+          <option value="">Selecione o tipo</option>
+          <optgroup label="Eletrodomésticos">
+            <option value="Geladeira">Geladeira</option>
+            <option value="Fogão">Fogão</option>
+            <option value="Micro-ondas">Micro-ondas</option>
+            <option value="Máquina de Lavar">Máquina de Lavar</option>
+          </optgroup>
+          <optgroup label="Sala">
+            <option value="TV">TV</option>
+            <option value="Home Theater">Home Theater</option>
+            <option value="Ventilador">Ventilador</option>
+          </optgroup>
+          <optgroup label="Quarto">
+            <option value="Ar Condicionado">Ar Condicionado</option>
+            <option value="Luz">Luz</option>
+            <option value="Abajur">Abajur</option>
+          </optgroup>
+          <optgroup label="Cozinha">
+            <option value="Exaustor">Exaustor</option>
+            <option value="Torradeira">Torradeira</option>
+            <option value="Cafeteira">Cafeteira</option>
+          </optgroup>
+          <optgroup label="Banheiro">
+            <option value="Chuveiro Elétrico">Chuveiro Elétrico</option>
+            <option value="Aquecedor">Aquecedor</option>
+            <option value="Exaustor de Banheiro">Exaustor de Banheiro</option>
+          </optgroup>
+        </select>
+        <select id="dispositivo-comodo"></select>
+        <button id="add-dispositivo">Adicionar Dispositivo</button>
+      </div>
+      <ul id="dispositivos-list"></ul>
+    </section>
 
-    <script src="script.js"></script>
+    <!-- CENAS -->
+    <section>
+      <h2>Cenas</h2>
+      <div class="form-container">
+        <input type="text" id="cena-nome" placeholder="Nome da cena">
+        <select id="cena-casa"></select>
+        <button id="add-cena">Adicionar Cena</button>
+      </div>
+      <div id="cena-dispositivos-container">
+        <p>Selecione uma casa para ver os dispositivos.</p>
+      </div>
+      <ul id="cenas-list"></ul>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>

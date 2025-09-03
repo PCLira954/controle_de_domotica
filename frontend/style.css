@@ -37,14 +37,19 @@ h2 {
 
 .form-container {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 20px;
 }
 
-.form-container input, .form-container select, .form-container button {
+.form-container input,
+.form-container select,
+.form-container button {
     padding: 8px;
     border-radius: 4px;
     border: 1px solid #ccc;
+    flex: 1;
+    min-width: 120px;
 }
 
 .form-container button {
@@ -82,4 +87,9 @@ li button {
     padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
+}
+
+li button.toggle-btn {
+    background-color: #28a745;
+    margin-right: 10px;
 }

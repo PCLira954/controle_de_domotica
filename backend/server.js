@@ -1,277 +1,253 @@
-const express = require('express')
-const cors = require('cors')
-const { Pool } = require('pg')
-require('dotenv').config()
+
+const express = require("express")
+const bodyParser = require("body-parser")
+const cors = require("cors")
+const { Pool } = require("pg")
+require("dotenv").config()
 
 const app = express()
-app.use(cors())
-app.use(express.json())
+const PORT = process.env.PORT || 3000
 
+// Configuração da conexão com o PostgreSQL
 const pool = new Pool({
   host: process.env.PGHOST,
-  port: Number(process.env.PGPORT || 5432),
+  port: process.env.PGPORT,
+  database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE
 })
 
-// util simples de espera
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+app.use(cors())
+app.use(bodyParser.json())
 
-// Evita executar a mesma cena em paralelo
-const cenasEmExecucao = new Set()
-
-/* -------------------- CÔMODOS -------------------- */
-app.get('/api/comodos', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM comodo ORDER BY id')
-  res.json(rows)
-})
-
-app.get('/api/comodos/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM comodo WHERE id=$1', [req.params.id]);
-  if (!rows[0]) return res.status(404).json({ error: 'Cômodo não encontrado' })
-  res.json(rows[0])
-});
-
-app.post('/api/comodos', async (req, res) => {
-  const { nome } = req.body;
-  if (!nome) return res.status(400).json({ error: 'nome é obrigatório' })
+// ================= CASAS =================
+app.get("/api/casas", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      'INSERT INTO comodo (nome) VALUES ($1) RETURNING *',
+    const result = await pool.query("SELECT * FROM casas ORDER BY id")
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post("/api/casas", async (req, res) => {
+  try {
+    const { nome } = req.body
+    if (!nome) return res.status(400).json({ error: "Nome da casa é obrigatório." })
+
+    const result = await pool.query(
+      "INSERT INTO casas (nome) VALUES ($1) RETURNING *",
       [nome]
     )
-    res.status(201).json(rows[0])
-  } catch (e) {
-    res.status(400).json({ error: 'Não foi possível criar o cômodo', detalhe: e.message })
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
   }
-});
-
-app.put('/api/comodos/:id', async (req, res) => {
-  const { nome } = req.body
-  const { rows } = await pool.query(
-    'UPDATE comodo SET nome=$1 WHERE id=$2 RETURNING *',
-    [nome, req.params.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Cômodo não encontrado' });
-  res.json(rows[0])
-});
-
-app.delete('/api/comodos/:id', async (req, res) => {
-  const r = await pool.query('DELETE FROM comodo WHERE id=$1', [req.params.id]);
-  if (r.rowCount === 0) return res.status(404).json({ error: 'Cômodo não encontrado' });
-  res.status(204).send()
-});
-
-/* -------------------- DISPOSITIVOS -------------------- */
-app.get('/api/dispositivos', async (req, res) => {
-  const { comodoId } = req.query
-  let q = 'SELECT * FROM dispositivo'
-  const params = [];
-  if (comodoId) {
-    q += ' WHERE comodo_id=$1'
-    params.push(comodoId);
-  }
-  q += ' ORDER BY id'
-  const { rows } = await pool.query(q, params)
-  res.json(rows)
 })
 
-app.get('/api/dispositivos/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM dispositivo WHERE id=$1', [req.params.id])
-  if (!rows[0]) return res.status(404).json({ error: 'Dispositivo não encontrado' })
-  res.json(rows[0]);
-});
-
-app.post('/api/dispositivos', async (req, res) => {
-  const { nome, tipo, status = false, comodoId } = req.body
-  if (!nome || !tipo || !comodoId)
-    return res.status(400).json({ error: 'nome, tipo, comodoId são obrigatórios' })
+app.delete("/api/casas/:id", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `INSERT INTO dispositivo (nome, tipo, status, comodo_id)
-       VALUES ($1,$2,$3,$4) RETURNING *`,
-      [nome, tipo, !!status, comodoId]
-    );
-    res.status(201).json(rows[0])
-  } catch (e) {
-    res.status(400).json({ error: 'Não foi possível criar o dispositivo', detalhe: e.message })
+    const { id } = req.params
+    await pool.query("DELETE FROM casas WHERE id = $1", [id])
+    res.json({ message: "Casa excluída com sucesso" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
   }
 })
 
-app.put('/api/dispositivos/:id', async (req, res) => {
-  const { nome, tipo, status, comodoId } = req.body
-  const { rows } = await pool.query(
-    `UPDATE dispositivo SET
-     nome=COALESCE($1, nome),
-     tipo=COALESCE($2, tipo),
-     status=COALESCE($3, status),
-     comodo_id=COALESCE($4, comodo_id)
-     WHERE id=$5 RETURNING *`,
-    [nome, tipo, status, comodoId, req.params.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Dispositivo não encontrado' })
-  res.json(rows[0])
-})
-
-app.patch('/api/dispositivos/:id/toggle', async (req, res) => {
-  const { rows } = await pool.query('UPDATE dispositivo SET status = NOT status WHERE id=$1 RETURNING *', [req.params.id])
-  if (!rows[0]) return res.status(404).json({ error: 'Dispositivo não encontrado' })
-  res.json(rows[0])
-})
-
-app.delete('/api/dispositivos/:id', async (req, res) => {
-  const r = await pool.query('DELETE FROM dispositivo WHERE id=$1', [req.params.id])
-  if (r.rowCount === 0) return res.status(404).json({ error: 'Dispositivo não encontrado' })
-  res.status(204).send()
-})
-
-/* -------------------- CENAS -------------------- */
-app.get('/api/cenas', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM cena ORDER BY id')
-  res.json(rows)
-})
-
-app.get('/api/cenas/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM cena WHERE id=$1', [req.params.id])
-  if (!rows[0]) return res.status(404).json({ error: 'Cena não encontrada' })
-  res.json(rows[0])
-});
-
-app.post('/api/cenas', async (req, res) => {
-  const { nome, ativa = true } = req.body
-  if (!nome) return res.status(400).json({ error: 'nome é obrigatório' });
-  const { rows } = await pool.query('INSERT INTO cena (nome, ativa) VALUES ($1,$2) RETURNING *', [nome, !!ativa])
-  res.status(201).json(rows[0])
-});
-
-app.put('/api/cenas/:id', async (req, res) => {
-  const { nome, ativa } = req.body
-  const { rows } = await pool.query(
-    'UPDATE cena SET nome=COALESCE($1,nome), ativa=COALESCE($2,ativa) WHERE id=$3 RETURNING *',
-    [nome, ativa, req.params.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Cena não encontrada' })
-  res.json(rows[0])
-});
-
-app.delete('/api/cenas/:id', async (req, res) => {
-  const r = await pool.query('DELETE FROM cena WHERE id=$1', [req.params.id])
-  if (r.rowCount === 0) return res.status(404).json({ error: 'Cena não encontrada' })
-  res.status(204).send()
-});
-
-/* ---- AÇÕES DA CENA ---- */
-// Listar ações de uma cena
-app.get('/api/cenas/:id/acoes', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM acao WHERE cena_id=$1 ORDER BY ordem', [req.params.id])
-  res.json(rows);
-});
-
-// Adicionar UMA ação
-app.post('/api/cenas/:id/acoes', async (req, res) => {
-  const { ordem, intervalo_ms = 0, status_desejado, dispositivo_id } = req.body;
-  if (ordem == null || status_desejado == null || !dispositivo_id)
-    return res.status(400).json({ error: 'ordem, status_desejado, dispositivo_id são obrigatórios' })
-
+// ================= CÔMODOS =================
+app.get("/api/comodos", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `INSERT INTO acao (ordem, intervalo_ms, status_desejado, dispositivo_id, cena_id)
-       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [ordem, intervalo_ms, status_desejado, dispositivo_id, req.params.id]
-    );
-    res.status(201).json(rows[0]);
-  } catch (e) {
-    res.status(400).json({ error: 'Não foi possível criar a ação', detalhe: e.message })
+    const result = await pool.query(
+      "SELECT c.*, ca.nome AS nome_casa FROM comodos c JOIN casas ca ON c.casa_id = ca.id ORDER BY c.id"
+    )
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
   }
-});
+})
 
-// Atualizar ação
-app.put('/api/acoes/:acaoId', async (req, res) => {
-  const { ordem, intervalo_ms, status_desejado, dispositivo_id } = req.body
-  const { rows } = await pool.query(
-    `UPDATE acao SET
-     ordem = COALESCE($1, ordem),
-     intervalo_ms = COALESCE($2, intervalo_ms),
-     status_desejado = COALESCE($3, status_desejado),
-     dispositivo_id = COALESCE($4, dispositivo_id)
-     WHERE id=$5 RETURNING *`,
-    [ordem, intervalo_ms, status_desejado, dispositivo_id, req.params.acaoId]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Ação não encontrada' })
-  res.json(rows[0]);
-});
-
-app.delete('/api/acoes/:acaoId', async (req, res) => {
-  const r = await pool.query('DELETE FROM acao WHERE id=$1', [req.params.acaoId])
-  if (r.rowCount === 0) return res.status(404).json({ error: 'Ação não encontrada' })
-  res.status(204).send();
-});
-
-/* ---- EXECUTAR CENA (com intervalos) ---- */
-app.post('/api/cenas/:id/executar', async (req, res) => {
-  const cenaId = Number(req.params.id);
-
-  // Evita sobreposição de execuções da mesma cena
-  if (cenasEmExecucao.has(cenaId)) {
-    return res.status(409).json({ error: 'Cena já está em execução' })
-  }
-
-  // Verifica se a cena existe e está ativa
-  const cena = await pool.query('SELECT * FROM cena WHERE id=$1', [cenaId])
-  if (!cena.rows[0]) return res.status(404).json({ error: 'Cena não encontrada' })
-  if (!cena.rows[0].ativa) return res.status(409).json({ error: 'Cena está desativada' })
-
-  const acoes = await pool.query('SELECT * FROM acao WHERE cena_id=$1 ORDER BY ordem', [cenaId])
-  if (acoes.rows.length === 0) return res.status(400).json({ error: 'Cena sem ações' })
-
-  // Cria log de execução
-  const exec = await pool.query(
-    `INSERT INTO execucao_cena (cena_id, status) VALUES ($1,'em_andamento') RETURNING *`,
-    [cenaId]
-  );
-  const execId = exec.rows[0].id
-
-  cenasEmExecucao.add(cenaId)
-
+app.post("/api/comodos", async (req, res) => {
   try {
-    for (const ac of acoes.rows) {
-      if (ac.intervalo_ms > 0) {
-        await sleep(ac.intervalo_ms)
-      }
-      // Aplica o status desejado ao dispositivo
-      await pool.query('UPDATE dispositivo SET status=$1 WHERE id=$2', [ac.status_desejado, ac.dispositivo_id])
+    const { nome, casaId } = req.body
+    if (!nome || !casaId) return res.status(400).json({ error: "Nome e casaId são obrigatórios." })
+
+    const result = await pool.query(
+      "INSERT INTO comodos (nome, casa_id) VALUES ($1, $2) RETURNING *",
+      [nome, casaId]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.delete("/api/comodos/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    await pool.query("DELETE FROM comodos WHERE id = $1", [id])
+    res.json({ message: "Cômodo excluído com sucesso" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ================= DISPOSITIVOS =================
+app.get("/api/dispositivos", async (req, res) => {
+  try {
+    const { casaId } = req.query
+    let query = `
+      SELECT d.*, c.nome AS nome_comodo, ca.nome AS nome_casa
+      FROM dispositivos d
+      JOIN comodos c ON d.comodo_id = c.id
+      JOIN casas ca ON c.casa_id = ca.id
+    `
+    const params = []
+    if (casaId) {
+      query += " WHERE ca.id = $1"
+      params.push(casaId)
+    }
+    query += " ORDER BY d.id"
+    const result = await pool.query(query, params)
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post("/api/dispositivos", async (req, res) => {
+  try {
+    const { nome, tipo, comodoId } = req.body
+    const comodo_id = parseInt(comodoId, 10)
+
+    if (!nome || !tipo || !comodo_id) {
+      return res.status(400).json({ error: "nome, tipo e comodoId são obrigatórios." })
     }
 
-    await pool.query(
-      `UPDATE execucao_cena
-       SET status='concluida', finalizada_em=NOW(), detalhes=$2
-       WHERE id=$1`,
-      [execId, `Executadas ${acoes.rows.length} ações com sucesso`]
-    );
-    res.status(200).json({ message: 'Cena executada com sucesso', execucaoId: execId })
-  } catch (e) {
-    await pool.query(
-      `UPDATE execucao_cena
-       SET status='falhou', finalizada_em=NOW(), detalhes=$2
-       WHERE id=$1`,
-      [execId, e.message]
-    );
-    res.status(500).json({ error: 'Falha na execução da cena', detalhe: e.message, execucaoId: execId })
-  } finally {
-    cenasEmExecucao.delete(cenaId)
+    const inserted = await pool.query(
+      "INSERT INTO dispositivos (nome, tipo, status, comodo_id) VALUES ($1, $2, $3, $4) RETURNING id",
+      [nome, tipo, "Desligado", comodo_id]
+    )
+    const newId = inserted.rows[0].id
+
+    const full = await pool.query(
+      `SELECT d.id, d.nome, d.tipo, d.status, c.id AS comodo_id, c.nome AS nome_comodo, ca.id AS casa_id, ca.nome AS nome_casa
+       FROM dispositivos d
+       JOIN comodos c ON d.comodo_id = c.id
+       JOIN casas ca ON c.casa_id = ca.id
+       WHERE d.id = $1`,
+      [newId]
+    )
+    res.status(201).json(full.rows[0])
+  } catch (err) {
+    console.error("Erro ao inserir dispositivo:", err)
+    res.status(500).json({ error: err.message })
   }
 })
 
-/* ---- SAÚDE ---- */
-app.get('/health', async (_req, res) => {
+app.patch("/api/dispositivos/:id/toggle", async (req, res) => {
   try {
-    await pool.query('SELECT 1')
-    res.json({ ok: true })
-  } catch {
-    res.status(500).json({ ok: false })
+    const { id } = req.params
+    const current = await pool.query("SELECT status FROM dispositivos WHERE id = $1", [id])
+    if (current.rows.length === 0) return res.status(404).json({ error: "Dispositivo não encontrado" })
+
+    const novoStatus = current.rows[0].status === "Ligado" ? "Desligado" : "Ligado"
+    const result = await pool.query("UPDATE dispositivos SET status = $1 WHERE id = $2 RETURNING *", [novoStatus, id])
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
   }
 })
 
-const port = Number(process.env.PORT || 3000);
-app.listen(port, () => console.log(`API rodando em http://localhost:${port}`))
+app.delete("/api/dispositivos/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    await pool.query("DELETE FROM dispositivos WHERE id = $1", [id])
+    res.json({ message: "Dispositivo excluído com sucesso" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ================= CENAS =================
+app.get("/api/cenas", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM cenas ORDER BY id")
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post("/api/cenas", async (req, res) => {
+  try {
+    const { nome, casaId, dispositivos } = req.body
+
+    if (!nome || !casaId) return res.status(400).json({ error: "Nome e casaId são obrigatórios." })
+    if (!dispositivos || !Array.isArray(dispositivos) || dispositivos.length < 3) {
+      return res.status(400).json({ error: "Uma cena deve ter no mínimo 3 dispositivos." })
+    }
+
+    const cena = await pool.query("INSERT INTO cenas (nome, casa_id) VALUES ($1, $2) RETURNING *", [nome, casaId])
+    const cenaId = cena.rows[0].id
+
+    for (const d of dispositivos) {
+      if (!d.id || !d.status_desejado) {
+        return res.status(400).json({ error: "Cada dispositivo precisa de id e status_desejado." })
+      }
+      await pool.query(
+        "INSERT INTO cena_dispositivos (cena_id, dispositivo_id, status_desejado) VALUES ($1, $2, $3)",
+        [cenaId, d.id, d.status_desejado]
+      )
+    }
+
+    res.status(201).json({ ...cena.rows[0], dispositivos })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post("/api/cenas/:id/executar", async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = await pool.query("SELECT dispositivo_id, status_desejado FROM cena_dispositivos WHERE cena_id = $1", [id])
+
+    for (const d of result.rows) {
+      await pool.query("UPDATE dispositivos SET status = $1 WHERE id = $2", [d.status_desejado, d.dispositivo_id])
+    }
+
+    res.json({ message: "Cena executada com sucesso" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// NOVO: Excluir cena
+app.delete("/api/cenas/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    await pool.query("DELETE FROM cena_dispositivos WHERE cena_id = $1", [id])
+    await pool.query("DELETE FROM cenas WHERE id = $1", [id])
+    res.json({ message: "Cena excluída com sucesso" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ================= SERVIDOR =================
+app.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`)
+})
